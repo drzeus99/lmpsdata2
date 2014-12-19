@@ -34,14 +34,16 @@ class Improper(object):
     def write(self):
         """converts the information stored in Improper to a string
         returns the string"""
-        return "{0} {1}\n".format(self.type, self._write_atom())
+        return "{0} {1}".format(self.type, self._write_atom())
     
     def _write_atom(self):
         """converts atom into a string seperated by spaces"""
-        return " ".join(str(i) for i in self.atom)
+        #line below is written this way to ensure that self.atom
+        #is at least a length of 4 when being written.
+        return " ".join(str(self.atom[i]) for i in range(4))
         
-b = Improper()
-b.read(["1", "2", "3", "4", "5", "6"], 3)
-print b.write()
-print b.type
-print b.atom
+#b = Improper()
+#b.read(["1", "2", "3", "4", "5", "6"], 1)
+#print b.write()
+#print b.type
+#print b.atom

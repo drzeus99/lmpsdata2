@@ -34,14 +34,16 @@ class Angle(object):
     def write(self):
         """converts the information stored in Angle to a string
         returns the string"""
-        return "{0} {1}\n".format(self.type, self._write_atom())
+        return "{0} {1}".format(self.type, self._write_atom())
     
     def _write_atom(self):
         """converts atom into a string seperated by spaces"""
-        return " ".join(str(i) for i in self.atom)
+        #line below is written this way to ensure that self.atom
+        #is at least a length of 3 when being written.
+        return " ".join(str(self.atom[i]) for i in range(3))
         
-a=Angle()
-a.read(["1", "2", "3", "4", "5"], 1)
-print a.write()
-print a.atom
-print a.type
+#a=Angle()
+#a.read(["1", "2", "3", "4", "5"], 1)
+#print a.write()
+#print a.atom
+#print a.type

@@ -13,7 +13,6 @@ class Atom(object):
         not all of the information stored in this class will be used by
         every atom_style"""
         self.atom_style = atom_style #is a string
-        self.id = int #atom-id
         self.type = int #atom-type
         self.molecule = int #molecule-id
         self.position = [] #x y z
@@ -27,24 +26,20 @@ class Atom(object):
         #read and store information from input for different atom_style
         if self.atom_style == "atomic" or\
         self.atom_style == "colloid":
-            index = self._read_id(input, index)
             index = self._read_type(input, index)
             index = self._read_position(input, index)
         elif self.atom_style == "angle" or\
         self.atom_style == "bond" or\
         self.atom_style == "molecular":
-            index = self._read_id(input, index)
             index = self._read_molecule(input, index)
             index = self._read_type(input, index)
             index = self._read_position(input, index)
         elif self.atom_style == "full":
-            index = self._read_id(input, index)
             index = self._read_molecule(input, index)
             index = self._read_type(input, index)
             index = self._read_charge(input, index)
             index = self._read_position(input, index)
         elif self.atom_style == "charge":
-            index = self._read_id(input, index)
             index = self._read_type(input, index)
             index = self._read_charge(input, index)
             index = self._read_position(input, index)
@@ -57,13 +52,7 @@ class Atom(object):
         if (index != len(input)):
             raise IOError("input is too long to be an atom with the {0} atom_style"\
             .format(self.atom_style))
-        
-    def _read_id(self, input, index):
-        """converts a list of strings into id"""
-        self.id = int(input[index])
-        index += 1
-        return index
-        
+                
     def _read_type(self, input, index):
         """converts a list of strings into type"""
         self.type = int(input[index])
@@ -112,18 +101,18 @@ class Atom(object):
         #writes information to a string for different atom_style
         if self.atom_style == "atomic" or\
         self.atom_style == "colloid":
-            return "{0} {1} {2} {3}\n".format(self.id, self.type, \
+            return "{0} {1} {2}".format(self.type, \
             self._write_position(), self._write_image())
         elif self.atom_style == "angle" or\
         self.atom_style == "bond" or\
         self.atom_style == "molecular":
-            return "{0} {1} {2} {3} {4}\n".format(self.id, self.molecule, \
+            return "{0} {1} {2} {3}".format(self.molecule, \
             self.type, self._write_position(), self._write_image())
         elif self.atom_style == "full":
-            return "{0} {1} {2} {3} {4} {5}\n".format(self.id, self.molecule, \
+            return "{0} {1} {2} {3} {4}".format(self.molecule, \
             self.type, self.charge, self._write_position(), self._write_image())
         elif self.atom_style == "charge":
-            return "{0} {1} {2} {3} {4}\n".format(self.id, self.type, \
+            return "{0} {1} {2} {3}".format(self.type, \
             self.charge, self._write_position(), self._write_image())
         else: #error condition
             raise RuntimeError("the {0} atom_style is either invalid or has not been implemented"\
@@ -131,52 +120,65 @@ class Atom(object):
              
     def _write_position(self):
         """converts position into a string seperated by spaces"""
-        return " ".join(str(i) for i in self.position)
+        #line below is written this way to ensure that self.position
+        #is at least a length of 3 when being written.
+        return " ".join(str(self.position[i]) for i in range(3))
         
     def _write_image(self):
         """converts image into a string seperated by spaces"""
         return " ".join(str(i) for i in self.image)
+        
+    def _check_format(self, atom_style):
+        """check if the format of the atom object's atom style and the inputed
+        atom style are compatible. if they are compatible return true. otherwise
+        return false."""
+        format1, format2 = self._return_format(atom_style)
+        return format1 == format2
+        
+    def _return_format(self, atom_style):
+        """returns two integers corresponding to the atom object's atom style
+        and the inputed atom style. if the numbers are the same the atom styles
+        are compatible."""
+        formats = {"atomic": 1, "colloid": 1, "angle": 2, "bond": 2,\
+        "molecular": 2, "full": 3, "charge": 4}
+        return formats[self.atom_style], formats[atom_style]
     
-a = Atom("atomic")
-a.read(["0", "1", "2.1", "3.9", "4.0"], 0)
-print a.atom_style
-print a.id
-print a.type
-print a.molecule        
-print a.position    
-print a.charge
-print a.image
-print a.write()
-
-b = Atom("molecular")
-b.read(["0", "1", "3","2.1", "3.9", "4.0", "5", "2", "6"], 0)
-print b.atom_style
-print b.id
-print b.type
-print b.molecule        
-print b.position    
-print b.charge
-print b.image
-print b.write()
-
-c = Atom("full")
-c.read(["0", "1", "3","2", "3.9", "4.0", "5.3", "2.01", "3"], 1)
-print c.atom_style
-print c.id
-print c.type
-print c.molecule        
-print c.position    
-print c.charge
-print c.image
-print c.write()
-
-d = Atom("charge")
-d.read(["0", "1", "3","2", "3.9", "4.0", "5", "2"], 0)
-print d.atom_style
-print d.id
-print d.type
-print d.molecule        
-print d.position    
-print d.charge
-print d.image
-print d.write()
+#a = Atom("atomic")
+#a.read(["0", "1", "2.1", "3.9"], 0)
+#print a.atom_style
+#print a.type
+#print a.molecule        
+#print a.position    
+#print a.charge
+#print a.image
+#print a.write()
+#
+#b = Atom("molecular")
+#b.read(["0", "1", "3","2.1", "3.9", "5", "2", "6"], 0)
+#print b.atom_style
+#print b.type
+#print b.molecule        
+#print b.position    
+#print b.charge
+#print b.image
+#print b.write()
+#
+#c = Atom("full")
+#c.read(["0", "1", "3","2", "3.9", "4.0", "5.3", "3"], 1)
+#print c.atom_style
+#print c.type
+#print c.molecule        
+#print c.position    
+#print c.charge
+#print c.image
+#print c.write()
+#
+#d = Atom("charge")
+#d.read(["0", "1", "3","2", "3.9", "5", "2"], 0)
+#print d.atom_style
+#print d.type
+#print d.molecule        
+#print d.position    
+#print d.charge
+#print d.image
+#print d.write()
