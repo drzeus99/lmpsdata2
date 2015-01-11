@@ -4,7 +4,7 @@ import body_data
 from body_data import Body_data
 from header_data import Header_data
 from molecule import Molecule
-from reactor import Reactor
+#from reactor import Reactor
 
 class Lmpsdata(Body_data, Header_data):
     """stores the information associated with body data and header data keywords.
@@ -108,55 +108,34 @@ class Lmpsdata(Body_data, Header_data):
             file.write("\n") #blank line after data
             
     #def join(self,): write this later and link to body_data's join method
-            
+ 
+#so far have 1584 lines of code. original program was 1945 lines of code
+           
 #header data has been completely tested just through reading and writing
 #for body data; get_body_data, create, check_body_keyword, _in_body_list, _initialize factory
 #_initialize_body_keyword_map have been successfully tested from writing and reading in lmpsdata
 #lmpsdata has been completely tested at this point
 #read write completely succesful //!also tested pmma85compositedata.initeq to see if velocity works
             #and it does
-#test_one = Lmpsdata('full', 'data.pmma100')
-#f = open('data.pmma100', 'r')
-#comment = f.readline()
-#test_one.write('data.test', comment)
-#test_two = Lmpsdata('full', 'data.test')
-#test_two.write('data.test2', comment)
-            
-test_one = Lmpsdata('full', 'pmma85compositedata.initeq')
+#molecule class completely tested
+#extract from body_data works
+#find and search method from body-data works           
 #testing delete_body_data whiich works perfectly
-#test_one.delete_body_data("Bonds")
-#print test_one.bonds
-#test_one.write("testing")
-
-#test for molecule class
+#test for molecule class works perfectly
 #finding atoms, velocities, angles, bonds, dihedrals and impropers with 
 #the correct molecule id works perfectly
 #copyies coefficients perfectly
 #extract method from body_data works perfectly
-#find method tested with method set to key for keywords other than "Pair Coeffs" or "PairIJ" 
-test_molecule = Molecule(test_one, 1)
-#print test_molecule.bonds
-#for key, atom in test_molecule.impropers.items():
-#   print key, atom.write()
-
-#find method with method set to "dict" successful
-#type_6 = test_molecule.find("Atoms", "type", 6, "dict")
-#for key, value in type_6.items():
-#    print key, value.write()
-    
-##find method for pair coefficients successful
-#type_2 = test_molecule.find("Pair Coeffs", "info", "2", "dict")
-#print type_2
-
-#initializing reactor
-molecule_reactor = Reactor(test_molecule)
-print molecule_reactor._data.bonds
+#Find and search method tested and works
+           
+#need to test reactor class
 
 #need to test add_data and add_atoms, _compatible_format,
 #_find_new_data, _add_new_data from body_data
-#need to write two more methods join and add_body_data
 
-#need to test density module
 
-#than need to write reactor class, and nano particle clas
-#also need to write a conversion modulue/class
+#need to test density module and space module
+
+#need to finish body_data and write nano particle class
+#need to write two more methods join and add_body_data in body data
+#may need to write equivalent methods in lmsdata class

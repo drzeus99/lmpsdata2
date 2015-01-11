@@ -138,13 +138,11 @@ class Body_data(object):
         data = self.get_body_data(keyword)
         #handles body_data which is a list
         if keyword == "Pair Coeffs" or keyword == "PairIJ":
-            for item in data:
-                del item
+            data[:] = []
         else:#handles body_data which is a dictionary
-            for key in data.keys():
-                del data[key]
+            data.clear()
                 
-   # def join(self,): fill in later
+   # def join(self,): Than do this one
         
     def extract(self, data, atom_info, value):
         """extracts the atoms from data that have the matching value for atom_info.
@@ -153,11 +151,22 @@ class Body_data(object):
         data is a body_data object, atom_info is a string that corresponds to
         the name of a variable stored in the atom class. the type for value is 
         dependent on atom_info and will either be an int or a float."""
+        atom_keys = self._extract_atoms(data, atom_info, value)
+        self._extract_coefficients(data)
+        self._extract_velocities(data, atom_keys)
+        self._extract_connections(data, atom_keys)
+        
+    def _extract_atoms(self, data, atom_info, value):
+        """Add later"""
         from copy import deepcopy
         #deepcopy atoms
         atom_keys = data.find("Atoms", atom_info, value, "keys")
         for key in atom_keys:
             self.atoms[key] = deepcopy(data.atoms[key])
+        return atom_keys
+    
+    def _extract_coefficients(self, data):
+        """Add later"""
         coeffs = {}
         coeffs["Angle Coeffs"] = "angle_coeffs"
         coeffs["Bond Coeffs"] = "bond_coeffs"
@@ -169,21 +178,28 @@ class Body_data(object):
         from copy import copy
         for keyword, value in coeffs.items():
            self.__setattr__(value, copy(data.get_body_data(keyword)))
+           
+    def _extract_velocities(self, data, atom_keys):
+        from copy import deepcopy
         #deepcopy velocities
         for key in atom_keys:
             try:
                 self.velocities[key] = deepcopy(data.velocities[key])
             except KeyError:
                 break
+    
+    def _extract_connections(self, data, atom_keys):
+        """Add later"""
+        from copy import deepcopy
         #deepcopy uniquely found angles, dihedrals, impropers, bonds
         #this algorithm should be O(N*M) where N is the size of the data dictionary
         #and M is the size of atom_keys
-        final_info = ["Angles", "Bonds", "Dihedrals", "Impropers"]
-        for keyword in final_info:
+        connection_keywords = ["Angles", "Bonds", "Dihedrals", "Impropers"]
+        for keyword in connection_keywords:
             found_keys = data.search(keyword, "atom", atom_keys, "keys")
             for key in found_keys:
                 self.get_body_data(keyword)[key] = deepcopy(data.get_body_data(keyword)[key])
-
+        
     def find(self, keyword, info, value, method):
         """finds the data corresponding with keyword that has the matching
         value for info. returns either a list of keys or a new dictionary.
@@ -298,7 +314,7 @@ class Body_data(object):
         else:
             raise RuntimeError('the value inputed for method is invalid. valid values are "keys" or "dict".')
 
-#    def add_body_data(self, data):
+#    def add_body_data(self, data): #start with this one
 #        """will implement later"""
 #        pass
                                 
