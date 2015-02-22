@@ -22,6 +22,9 @@ class Coeffs(object):
         """converts info into a string seperated by spaces"""
         return " ".join(i for i in self.info)
         
+    def __eq__(self, other):
+        return self.info == other.info
+        
 #a = Coeffs()
 #a.read(["1", '2', '3'], 0)
 #print a.write()

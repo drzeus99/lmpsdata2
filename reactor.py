@@ -15,18 +15,18 @@ class Reactor(object):
     @staticmethod
     def change_atom_num(data, old_new_keys): #finished except comment block
         """Add later"""
-        from copy import copy
-        #use old_new_keys to build new velocity dictionary
+        #use old_new_keys to build new velocity dictionary and new atoms dictionary
+        new_atoms = {}
         new_velocities = {}
         for old_key, new_key in old_new_keys.items():
-            new_velocities[new_key] = copy(data.velocities[old_key])
-        #delete old velocity dictionary 
-        #[delete is required before set to avoid memory leak due to ref count never reaching 0]
-        data.delete_body_data("Velocities")
-        #set old velocity dictionary to new_velocity_dictionary
-        #copy is required here so that when new_velocities is deleted as this method
-        #ends data.velocities will not be pointing to garbage collected objects
-        data.__setattr__("velocities", copy(new_velocities))
+            new_atoms[new_key] = data.atoms[old_key]
+            new_velocities[new_key] = data.velocities[old_key]
+        #assign new velocities and new atoms to their respective dictionaries in data
+        data.velocities = new_velocities
+        data.atoms = new_atoms
+        #reininitialize the body keyword map so Velocities and Atoms keyword
+        #correspond to the updated dictionary and not the original
+        data._initialize_body_keyword_map()
         #use old_new_keys to modify data.angles, data.bonds, data.dihedrals, data.impropers
         connection_keywords = ["Angles", "Bonds", "Dihedrals", "Impropers"]
         for keyword in connection_keywords:
@@ -43,6 +43,11 @@ class Reactor(object):
         """Add later"""
         for key in keys:
             del data.atoms[key]
+        try:
+            for key in keys:
+                del data.velocities[key]
+        except KeyError:
+            pass
         connection_keywords = ["Angles", "Bonds", "Dihedrals", "Impropers"]
         for keyword in connection_keywords:
             connection = data.get_body_data(keyword)
@@ -128,7 +133,7 @@ class Reactor(object):
             body_data[index].read(value, 0)
         else:
             body_data[index].__setattr__(info, value)
-    
+    #definite bug in this algorithm
     def find_particle_bonding_locations(self, particle, info, value, cutoff_distance, bond_number): #finished except comment block
         """Rewrite this"""
         #checking to make sure bond_number is not 0
@@ -147,10 +152,11 @@ class Reactor(object):
         possible_bonds = {}
         #find possible_bonds
         for surface_key in particle.surface:
-            possible_bonds[surface_key] = []
-            for reactor_key in possible_reactor_bonds.keys():
-                if space.distance(particle.atoms[surface_key], possible_reactor_bonds[reactor_key]) <= cutoff_distance:
-                    possible_bonds[surface_key].append(reactor_key)
+            if particle.used_surface.test_element(surface_key, False):
+                possible_bonds[surface_key] = []
+                for reactor_key in possible_reactor_bonds.keys():
+                    if space.distance(particle.atoms[surface_key], possible_reactor_bonds[reactor_key]) <= cutoff_distance:
+                        possible_bonds[surface_key].append(reactor_key)
         #possible surface keys is a list containing particle surface keys where
         #bonds can form. these keys connect to the possible_bonds dictionary above
         possible_surface_keys = []
@@ -161,6 +167,7 @@ class Reactor(object):
         #check if possible surface keys is empty
         if possible_surface_keys == []:
             print "no possible bonds can be formed"
+            self._particle_bonding_information[:] = []
             return
         #initialize Boolean_dict representing the state of assigned bond formation
         #to possible reactor bonds 
@@ -180,13 +187,14 @@ class Reactor(object):
             reactor_key, found = self._find_reactor_bond(possible_bonds[choosen_surface_key], assigned_reactor_bonds)
             if found:
                 #append keys to bonding information
-                self.bondinginformation.append([reactor_key, choosen_surface_key])
+                self._particle_bonding_information.append([reactor_key, choosen_surface_key])
+                particle.used_surface.set_element(choosen_surface_key, True)
                 bonds += 1
             #delete randomly choosen surface key from list of possible surface keys
             del possible_surface_keys[index]
             if possible_surface_keys == []:
                 return
-                
+        
     def _find_reactor_bond(self, possible_reactor_bonds, assigned_reactor_bonds):#finished except comment block
         """Write this later"""
         from random import randint
@@ -215,30 +223,31 @@ class Reactor(object):
         #extract keys from bonding information as you are doing modifications in this step
         reactor_keys = []
         particle_keys = []
-        for i in range(len(self.bondinginformation)):
+        for i in range(len(self._particle_bonding_information)):
             for j in range(len(reactor_modifications)):
-                self.modify(self._data, "Atoms", self.bondinginformation[i][0], reactor_modifications[j][0], reactor_modifications[j][1])
-                reactor_keys.append(self.bondinginformation[i][0])
-                particle_keys.append(self.bondinginformation[i][1])
+                self.modify(self._data, "Atoms", self._particle_bonding_information[i][0], reactor_modifications[j][0], reactor_modifications[j][1])
                 #reactor_modifications[j][0] is info
                 #reactor_modifications[j][1] is value
+            reactor_keys.append(self._particle_bonding_information[i][0])
+            particle_keys.append(self._particle_bonding_information[i][1])
+                
         #find the atom keys in the reactor that need deleting than delete them        
         atom_keys = self.find_connected_atoms(self._data, reactor_keys, reactor_delete_rules)
         self.delete_atoms(self._data, atom_keys)
         #delete the atoms in the particle that the reactor has replaced when bonding
-        self.delete_atoms(particle, particle_keys)
+        particle.delete_atoms(particle_keys)
 
 class Boolean_dict:#rewrite block comments
     """A class that stores boolean values in a list of lists."""	
-    def __init__(self, dictionary, initval): 		
+    def __init__(self, list_of_keys, initval): 		
 	""" initialise a list of lists (array) with
 	rownum correspondinig to the number of lists in the list and 
 	colnum corresponding to the number of elements in the list's list.
 	initval is the value the list of lists will be initialized with.
 	initval should be a boolean value."""
 	# initializing _map
-	self._map = []
-	for i in dictionary.keys():
+	self._map = {}
+	for i in list_of_keys:
          self._map[i] = initval
 			
     def set_element(self, key, value):

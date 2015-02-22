@@ -31,10 +31,8 @@ class Body_data(object):
         self.dihedrals = {}
         self.impropers = {}
         self.masses = {}
-        # represents both PairIJ and Pair Coeffs keyword which
-        # may cause bugs to occur
-        # if bugs occur split PairIJ and Pair Coeffs to seperate lists
         self.pair_coeffs = []
+        self.pair_ij_coeffs = []
         self.velocities = {}
         self._factory = {}
         self._initialize_factory()
@@ -74,7 +72,7 @@ class Body_data(object):
         self._body_keyword_map["Impropers"] = self.impropers
         self._body_keyword_map["Masses"] = self.masses
         self._body_keyword_map["Pair Coeffs"] = self.pair_coeffs
-        self._body_keyword_map["PairIJ"] = self.pair_coeffs
+        self._body_keyword_map["PairIJ"] = self.pair_ij_coeffs
         self._body_keyword_map["Velocities"] = self.velocities
         
     def create(self, keyword):
@@ -142,8 +140,14 @@ class Body_data(object):
         else:#handles body_data which is a dictionary
             data.clear()
                 
-   # def join(self,): Than do this one
-        
+    def join(self, data_list):
+        """Write this later"""
+        #delete all the data currently stored in body_data 
+        for keyword in self._body_keyword_map.keys():
+            self.delete_body_data(keyword)
+        for data in data_list:
+            Body_data.add_body_data(self, data)
+            
     def extract(self, data, atom_info, value):
         """extracts the atoms from data that have the matching value for atom_info.
         than extracts the associated information from angles, bonds, dihedrals,
@@ -173,12 +177,14 @@ class Body_data(object):
         coeffs["Dihedral Coeffs"] = "dihedral_coeffs"
         coeffs["Improper Coeffs"] = "improper_coeffs"
         coeffs["Pair Coeffs"] = "pair_coeffs"
+        coeffs["PairIJ"] = "pair_ij_coeffs"
         coeffs["Masses"] = "masses"
         #copy coeffs
         from copy import copy
         for keyword, value in coeffs.items():
            self.__setattr__(value, copy(data.get_body_data(keyword)))
-           
+        self._initialize_body_keyword_map()
+        
     def _extract_velocities(self, data, atom_keys):
         from copy import deepcopy
         #deepcopy velocities
@@ -314,9 +320,17 @@ class Body_data(object):
         else:
             raise RuntimeError('the value inputed for method is invalid. valid values are "keys" or "dict".')
 
-#    def add_body_data(self, data): #start with this one
-#        """will implement later"""
-#        pass
+    def add_body_data(self, data): #start with this one
+        """will implement later"""
+        old_new_keys = Body_data.add_atoms(self, data.atoms)
+        from reactor import Reactor
+        #the problem is in reactor change_atom_num
+        Reactor.change_atom_num(data, old_new_keys)
+        body_keywords = ["Angles", "Bonds", "Angle Coeffs", "Bond Coeffs",\
+        "Dihedral Coeffs", "Improper Coeffs", "Dihedrals", "Impropers",\
+        "Masses", "Pair Coeffs", "Velocities"]
+        for keyword in body_keywords:
+            Body_data.add_data(self, data.get_body_data(keyword), keyword)
                                 
     def add_atoms(self, atoms):
         """add a dictionary of atoms or a list of list of strings to the body data
@@ -327,13 +341,6 @@ class Body_data(object):
         the body data dictionary of atoms. If an incompatibility is detected 
         between the atom_style of atoms and the body data dictionary of atoms, 
         a runtime error is raised."""
-        #check to make sure the atoms being added are compatible with the 
-        # format of the current atoms contained in this body_data object
-        if not(self._compatible_format(atoms)):
-            raise RuntimeError("""The atom_style of the atoms being added are 
-not compatible with the atoms currently stored in this body_data object""")
-        init_key = max(self.atoms) + 1
-        old_new_keys = {}
         #if atoms is a list convert atoms to a dictionary
         if isinstance(atoms, list):
             temp_list = atoms #copy atoms pointer to temp_list
@@ -341,7 +348,18 @@ not compatible with the atoms currently stored in this body_data object""")
             for row in temp_list: #fill dictionary with atom ids and atoms
                 atom = self.create("Atoms")
                 atom.read(row, 1)
-                atoms[int(row[0])] = atom 
+                atoms[int(row[0])] = atom        
+        #check to make sure the atoms being added are compatible with the 
+        # format of the current atoms contained in this body_data object
+        if not(self._compatible_format(atoms)):
+            raise RuntimeError("""The atom_style of the atoms being added are 
+not compatible with the atoms currently stored in this body_data object""")
+        #find the initial key value
+        try:
+            init_key = max(self.atoms) + 1
+        except ValueError:
+            init_key = 1
+        old_new_keys = {}
         for key, value in atoms.items():
             #add value to self.atoms as a shallow copy
             self.atoms[init_key] = value
@@ -350,29 +368,32 @@ not compatible with the atoms currently stored in this body_data object""")
             init_key += 1
         return old_new_keys
         
-    def add_data(self, data, keyword):
+    def add_data(self, data, keyword): #list is being converted to a dictionary correctly
         """add a dictionary or list of list of strings or a list to the corresponding 
         item stored in body_data. if a list of list of strings is given its converted
         to a dictionary or list depending on keyword. if an incompatibility is detected between the atom_style of
         velocities and the body data dictionary of velocities, a runtime error 
         is raised. For coefficients runs a method to ensure duplication of data does
         not occur. For other data types, there is no check for duplication."""
-        if isinstance(data, list) and keyword != "Pair Coeffs" and\
-        keyword != "PairIJ":
+        if  keyword != "Pair Coeffs" and keyword != "PairIJ" and\
+        isinstance(data, list):
             temp_list = data
             data = dict()
             for row in temp_list:
                 item = self.create(keyword)
                 item.read(row, 1)
                 data[int(row[0])] = item
-        elif isinstance(data[0], list) and (keyword == "Pair Coeffs" or\
-        keyword == "PairIJ"):
-            temp_list = data
-            data = list()
-            for row in temp_list:
-                item = self.create(keyword)
-                item.read(row, 0)
-                data.append(item)
+        elif  (keyword == "Pair Coeffs" or keyword == "PairIJ"): 
+            try:
+                data[0][0] #called as a test to see if data is a list of lists
+                temp_list = data
+                data = list()
+                for row in temp_list:
+                    item = self.create(keyword)
+                    item.read(row, 0)
+                    data.append(item)
+            except IndexError:
+                pass
         if keyword == "Velocities":
             if not(self._compatible_format(data)):
                 raise RuntimeError("""The atom_style of the velocities being
@@ -388,10 +409,12 @@ added are not compatible with the velocities currently stored in this body_data 
         else:
             raise ValueError("inputed keyword is not a valid string.")
         
-    def _compatible_format(self, keyword, data):
+    def _compatible_format(self, data):
         """checks if the objects stored in data have an atom_style compatible
         with the objects stored in body_data. this method can call the _check_format
         method of the velocity and atom objects."""
+        if data == {}:
+            return True
         data_keys = data.keys()
         #check if atom_styles match if so return true
         if (data[data_keys[0]].atom_style == self.atom_style):
@@ -399,7 +422,7 @@ added are not compatible with the velocities currently stored in this body_data 
         else: #check if atom_styles are compatible
             return data[data_keys[0]]._check_format(self.atom_style)
 
-    def _find_new_data(self, data, keyword):
+    def _find_new_data(self, data, keyword): #check to make sure coeffs are correctly done
         """inserts new coefficient data into body_data. insures that duplicate
         data is not inserted."""
         #check if data is empty
@@ -408,10 +431,19 @@ added are not compatible with the velocities currently stored in this body_data 
         #check if get_body_data(keyword) is empty
         if len(self.get_body_data(keyword)) == 0:
             from copy import copy
-            data_in_object = self.get_body_data(keyword) 
-            data_in_object = copy(data)
-        #check if data and get_body_data(keyword) are the same    
-        if cmp(data, self.get_body_data(keyword)):
+            coeffs = {}
+            coeffs["Angle Coeffs"] = "angle_coeffs"
+            coeffs["Bond Coeffs"] = "bond_coeffs"
+            coeffs["Dihedral Coeffs"] = "dihedral_coeffs"
+            coeffs["Improper Coeffs"] = "improper_coeffs"
+            coeffs["Pair Coeffs"] = "pair_coeffs"
+            coeffs["PairIJ"] = "pair_ij_coeffs"
+            coeffs["Masses"] = "masses" 
+            self.__setattr__(coeffs[keyword], copy(data))
+            self._initialize_body_keyword_map()
+            return
+        #check if data and get_body_data(keyword) are the same
+        if data == self.get_body_data(keyword):
             pass #does nothing since data is the same as get_body_data(keyword)
         else:
             #for dealing with lists, O(n^2) algorithm
@@ -419,30 +451,31 @@ added are not compatible with the velocities currently stored in this body_data 
                 for i in data:
                     test = False
                     for j in self.get_body_data(keyword):
-                        if not(cmp(i,j)):
+                        if i == j:
                             test = True
                             break
                     if not test:
                         self.get_body_data(keyword).append(i)                    
-            #for dealing with dictionaries, O(n^2) algorithm
+            #for dealing with dictionaries, O(n) algorithm
             elif keyword == "Angle Coeffs" or keyword == "Bond Coeffs" or \
-            keyword == "Dihedral Coeffs" or keyword == "Improper Coeffs":
+            keyword == "Dihedral Coeffs" or keyword == "Improper Coeffs" or \
+            keyword == 'Masses':
                 old_data = self.get_body_data(keyword)
-                init_key = max(old_data)
-                for val1 in data.values():
-                    test = False
-                    for val2 in old_data.values():
-                        if not(cmp(val1, val2)):
-                            test = True
-                            break
-                    if not test:
-                        old_data[init_key] = val1
-                        init_key += 1
-                        
+                #test if key from data is in use
+                for key, val in data.items():
+                    if key in old_data: #.__contains__(key):               
+                        raise KeyError('when adding mass infomation keys must be unique. Key {0} is a duplicate.'\
+                        .format(key))
+                    else:
+                        old_data[key] = val                
+                
     def _add_new_data(self, data, keyword):
         """inserts new data into body_data. does not check if duplication occurs"""
         old_data = self.get_body_data(keyword)
-        init_key = max(old_data) + 1
+        try:        
+            init_key = max(old_data) + 1
+        except ValueError:
+            init_key = 1
         for value in data.values():
             old_data[init_key] = value
             init_key += 1 

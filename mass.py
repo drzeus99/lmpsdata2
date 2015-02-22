@@ -27,6 +27,9 @@ class Mass(object):
         returns the string"""
         return "{0}".format(self.value)
         
+    def __eq__(self, other):
+        return self.value == other.value
+        
 #a = Mass()
 #a.read(["1", "2", "3"], 2)
 #print a.write()
