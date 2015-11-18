@@ -3,7 +3,7 @@
 class Improper(object):
     """stores, reads and writes a LAMMPS dihedral"""
     def __init__(self):
-        """initializes a LAMMPS bond"""
+        """initializes a LAMMPS improper"""
         self.type = int #the bond type 
         self.atom = [] #the atoms connecting the bond
         

@@ -133,7 +133,7 @@ class Reactor(object):
             body_data[index].read(value, 0)
         else:
             body_data[index].__setattr__(info, value)
-    #definite bug in this algorithm
+  
     def find_particle_bonding_locations(self, particle, info, value, cutoff_distance, bond_number): #finished except comment block
         """Rewrite this"""
         #checking to make sure bond_number is not 0

@@ -95,7 +95,7 @@ class Density(object):
                     positions.append([xyz[0][i], xyz[1][j], xyz[2][k]])
         return positions
                     
-    @staticmethod #have bug in here am changing radius in code
+    @staticmethod 
     def nanoparticle(particle, data, spacing, init, final):
         """Write Later"""
         keys = set(data.atoms.keys())
